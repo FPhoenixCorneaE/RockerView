@@ -243,6 +243,8 @@ class RockerView @JvmOverloads constructor(
     companion object {
         private const val TOUCHED_COLOR = Color.YELLOW
         private const val DEFAULT_COLOR = Color.WHITE
+
+        /** 最大阈值 */
         private const val MAX_THRESHOLD = 80f
     }
 }
