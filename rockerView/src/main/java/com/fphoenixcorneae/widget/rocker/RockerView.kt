@@ -2,10 +2,13 @@ package com.fphoenixcorneae.widget.rocker
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.res.ColorStateList
 import android.graphics.*
+import android.graphics.drawable.GradientDrawable
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
+import androidx.annotation.ColorInt
 import kotlin.math.*
 
 /**
@@ -27,11 +30,13 @@ class RockerView @JvmOverloads constructor(
     defStyleAttr: Int = 0,
 ) : View(context, attrs, defStyleAttr) {
 
+    private var defaultColor = DEFAULT_COLOR
+    private var touchedColor = TOUCHED_COLOR
     private val path = Path()
     private val paint = Paint().apply {
         isAntiAlias = true
         alpha = 0x88
-        color = NORMAL_COLOR
+        color = defaultColor
     }
     private var outerCenterX = 0f
     private var outerCenterY = 0f
@@ -145,7 +150,7 @@ class RockerView @JvmOverloads constructor(
      * Call this method when ACTION_DOWN
      */
     private fun begin(x: Float, y: Float) {
-        paint.color = TOUCHED_COLOR
+        paint.color = touchedColor
         val distance = distance(x, y, outerCenterX, outerCenterY)
         if (distance < outerR) {
             // 滑动点和原地的距离大于外半径的时候做保护，如果在范围内表示触摸成功
@@ -183,7 +188,7 @@ class RockerView @JvmOverloads constructor(
      * Call this method when ACTION_UP
      */
     private fun reset() {
-        paint.color = NORMAL_COLOR
+        paint.color = defaultColor
         innerCenterX = outerCenterX
         innerCenterY = outerCenterY
         isRockerTouched = false
@@ -206,9 +211,38 @@ class RockerView @JvmOverloads constructor(
         this.onSteeringWheelChangedListener = listener
     }
 
+    /**
+     * 设置默认状态下的摇杆颜色
+     */
+    fun setDefaultColor(@ColorInt color: Int) = apply {
+        defaultColor = color
+        paint.color = defaultColor
+    }
+
+    /**
+     * 设置按下状态下的摇杆颜色
+     */
+    fun setTouchedColor(@ColorInt color: Int) = apply {
+        touchedColor = color
+    }
+
+    /**
+     * 设置背景着色
+     */
+    fun setBackgroundTint(@ColorInt color: Int) = apply {
+        backgroundTintList = ColorStateList.valueOf(color)
+    }
+
+    init {
+        background = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(Color.parseColor("#99010a15"))
+        }
+    }
+
     companion object {
         private const val TOUCHED_COLOR = Color.YELLOW
-        private const val NORMAL_COLOR = Color.WHITE
+        private const val DEFAULT_COLOR = Color.WHITE
         private const val MAX_THRESHOLD = 80f
     }
 }

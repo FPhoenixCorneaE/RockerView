@@ -11,7 +11,6 @@
         android:id="@+id/ivRocker"
         android:layout_width="160dp"
         android:layout_height="wrap_content"
-        android:background="@drawable/shape_bg_rocker"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
