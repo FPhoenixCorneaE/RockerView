@@ -25,5 +25,6 @@ class MainActivity : AppCompatActivity() {
             .setOnSteeringWheelChangedListener { linearSpeed, angleSpeed ->
                 Log.i("RockerView", "linearSpeed: $linearSpeed, angleSpeed: $angleSpeed")
             }
+            .setSteeringWheelChangeRate(90L)
     }
 }
