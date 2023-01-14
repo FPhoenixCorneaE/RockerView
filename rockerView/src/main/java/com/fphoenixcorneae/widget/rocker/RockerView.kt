@@ -50,6 +50,9 @@ class RockerView @JvmOverloads constructor(
     /** 事件回调接口 */
     private var onSteeringWheelChangedListener: OnSteeringWheelChangedListener? = null
 
+    /** 事件触发频率 */
+    private var steeringWheelChangeRate = CALLBACK_INTERVAL
+
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
         setMeasuredDimension(MeasureSpec.getSize(widthMeasureSpec), MeasureSpec.getSize(widthMeasureSpec))
@@ -73,6 +76,43 @@ class RockerView @JvmOverloads constructor(
         drawSelf(canvas)
     }
 
+    /**
+     * 计算摇杆距离并触发回调
+     */
+    private fun calculateWheelChange() {
+        onSteeringWheelChangedListener?.let {
+            // 计算两点之间距离
+            val innerDistance = distance(innerCenterX, innerCenterY, outerCenterX, outerCenterY)
+            val r0 = (innerDistance / outerR) * MAX_THRESHOLD
+            // 获取水平线夹角弧度
+            val radian = getRadian(outerCenterX, outerCenterY, innerCenterX, innerCenterY)
+            // 获取摇杆偏移角度
+            val angle = getAngleConvert(radian)
+            // 算出弧度
+            val angleTemp = Math.toRadians(angle)
+            // 线速度
+            val linearSpeed = floor(r0 * sin(angleTemp) + 0.5f).toInt().toFloat()
+            // 角度乘以速度等于向心加速度（角速度）
+            val angleSpeed = -floor(r0 * cos(angleTemp) + 0.5f).toInt().toFloat()
+            onSteeringWheelChangedListener?.invoke(linearSpeed, angleSpeed)
+        }
+    }
+
+    /**
+     * 手指按下后持续触发摇杆回调
+     */
+    private val runnableRepeat = object : Runnable {
+        override fun run() {
+            calculateWheelChange()
+            handler.postDelayed(this, steeringWheelChangeRate)
+        }
+    }
+
+    /**
+     * 用于抬起手指后触发一次清0计算
+     */
+    private val runnableOnce = Runnable { calculateWheelChange() }
+
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean {
         val currentX = event.x
@@ -81,6 +121,7 @@ class RockerView @JvmOverloads constructor(
             MotionEvent.ACTION_DOWN -> {
                 parent.requestDisallowInterceptTouchEvent(true)
                 begin(currentX, currentY)
+                handler.post(runnableRepeat)
             }
             MotionEvent.ACTION_MOVE -> {
                 update(currentX, currentY)
@@ -88,6 +129,8 @@ class RockerView @JvmOverloads constructor(
             MotionEvent.ACTION_UP -> {
                 parent.requestDisallowInterceptTouchEvent(false)
                 reset()
+                handler.removeCallbacks(runnableRepeat)
+                handler.post(runnableOnce)
             }
             else -> {}
         }
@@ -104,22 +147,6 @@ class RockerView @JvmOverloads constructor(
         path.addCircle(outerCenterX, outerCenterY, width / 2f, Path.Direction.CW)
         canvas.clipPath(path)
         canvas.drawCircle(innerCenterX, innerCenterY, innerR, paint)
-        if (onSteeringWheelChangedListener != null) {
-            // 计算两点之间距离
-            val innerDistance = distance(innerCenterX, innerCenterY, outerCenterX, outerCenterY)
-            val r0 = (innerDistance / outerR) * MAX_THRESHOLD
-            // 获取水平线夹角弧度
-            val radian = getRadian(outerCenterX, outerCenterY, innerCenterX, innerCenterY)
-            // 获取摇杆偏移角度
-            val angle = getAngleConvert(radian)
-            // 算出弧度
-            val angleTemp = Math.toRadians(angle)
-            // 线速度
-            val linearSpeed = floor(r0 * sin(angleTemp) + 0.5f).toInt().toFloat()
-            // 角度乘以速度等于向心加速度（角速度）
-            val angleSpeed = -floor(r0 * cos(angleTemp) + 0.5f).toInt().toFloat()
-            onSteeringWheelChangedListener?.invoke(linearSpeed, angleSpeed)
-        }
     }
 
     /**
@@ -207,8 +234,15 @@ class RockerView @JvmOverloads constructor(
     /**
      * 设置摇杆改变监听
      */
-    fun setOnSteeringWheelChangedListener(listener: OnSteeringWheelChangedListener?) = run {
+    fun setOnSteeringWheelChangedListener(listener: OnSteeringWheelChangedListener?) = apply {
         this.onSteeringWheelChangedListener = listener
+    }
+
+    /**
+     * 设置摇杆监听触发频率，默认[CALLBACK_INTERVAL]ms
+     */
+    fun setSteeringWheelChangeRate(rate: Long) = apply {
+        this.steeringWheelChangeRate = rate
     }
 
     /**
@@ -246,5 +280,8 @@ class RockerView @JvmOverloads constructor(
 
         /** 最大阈值 */
         private const val MAX_THRESHOLD = 80f
+
+        /** 默认回调触发间隔 单位ms */
+        private const val CALLBACK_INTERVAL = 100L
     }
 }
